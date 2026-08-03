@@ -7,18 +7,33 @@ const USERS = { alan: "Alan", dani: "Dani" };
 const STAGE_BY_ID = Object.fromEntries(STAGES.map(s => [s.id, s]));
 const STAGE_ORDER = Object.fromEntries(STAGES.map((s, i) => [s.id, i]));
 
-// Map centroids for the schematic SVG (viewBox 0 0 1000 460)
+// Stage marker positions for the schematic SVG (viewBox 0 0 1000 460),
+// laid out to match the official 2026 patron map.
 const MAP_POS = {
-  landsend:  [185, 245],
-  sutro:     [400, 260],
-  twinpeaks: [565, 265],
-  panhandle: [715, 150],
-  soma:      [870, 255],
+  landsend:  [195, 330],
+  sutro:     [285, 172],
+  twinpeaks: [872, 182],
+  panhandle: [695, 238],
+  soma:      [752, 80],
 };
+
+// Meadow blobs behind the stage markers (color-matched to the official map)
+const MEADOWS = [
+  { name: "Polo Field",     cx: 295, cy: 330, rx: 150, ry: 72, color: "#f5c542", lx: 335, ly: 385 },
+  { name: "Lindley Meadow", cx: 380, cy: 168, rx: 132, ry: 46, color: "#2a8fa3", lx: 425, ly: 205 },
+  { name: "McLaren Pass",   cx: 568, cy: 220, rx: 82,  ry: 48, color: "#4a6fa5", lx: 568, ly: 262 },
+  { name: "Hellman Hollow", cx: 778, cy: 218, rx: 138, ry: 68, color: "#e05257", lx: 790, ly: 297 },
+  { name: "Marx Meadow",    cx: 752, cy: 84,  rx: 78,  ry: 32, color: "#8b8b99", lx: 660, ly: 60 },
+  { name: "Grass Lands",    cx: 485, cy: 398, rx: 48,  ry: 20, color: "#7cb342", lx: 485, ly: 434 },
+];
+
+const OFFICIAL_ZOOMS = [100, 200, 300, 450];
+let officialZoom = 1; // index into OFFICIAL_ZOOMS
 
 let picks = loadPicks();
 let myDayView = "alan";
 let mapSel = [];
+let mapView = "official";
 
 // ---------- helpers ----------
 
@@ -82,8 +97,10 @@ function setRow(set, extra) {
       '<div class="mid">' +
         '<div class="artist">' + set.artist + hl +
           '<span class="badge-now">ON NOW</span><span class="badge-next">UP NEXT</span>' +
-          (extra && extra.owner ? extra.owner : "") + '</div>' +
+          (extra && extra.owner ? extra.owner : "") +
+          (set.bio ? '<span class="chev">▸</span>' : "") + '</div>' +
         '<div class="desc">' + set.desc + '</div>' +
+        (set.bio ? '<div class="bio" hidden>' + set.bio + '</div>' : "") +
         '<span class="stage-chip">' + stage.name + '</span>' +
         (extra && extra.notes ? extra.notes : "") +
       '</div>' +
@@ -128,7 +145,7 @@ function renderByStage() {
   }
   html += '<div class="note-card"><h3>Party stages — no published set times</h3>';
   for (const p of PARTY_STAGES) {
-    html += "<p><b>" + p.name + "</b> — " + p.note + "</p>";
+    html += "<p><b>" + p.name + "</b> · " + p.where + " — " + p.note + "</p>";
   }
   html += "<p>Wander by between main-stage sets.</p></div>";
   document.getElementById("panel-stages").innerHTML = html;
@@ -234,56 +251,66 @@ function renderMyDay() {
 
 // ---------- Map ----------
 
-function stageShapeSVG(stage) {
+function meadowsSVG() {
+  let s = "";
+  for (const m of MEADOWS) {
+    s += '<ellipse cx="' + m.cx + '" cy="' + m.cy + '" rx="' + m.rx + '" ry="' + m.ry + '" fill="' + m.color + '" fill-opacity="0.18" stroke="' + m.color + '" stroke-opacity="0.55" stroke-width="1.5"/>' +
+      '<text x="' + m.lx + '" y="' + m.ly + '" text-anchor="middle" font-size="12" font-style="italic" fill="#9aa0ab">' + m.name + "</text>";
+  }
+  return s;
+}
+
+function stageMarkerSVG(stage) {
   const [cx, cy] = MAP_POS[stage.id];
   const c = stage.color;
-  let shape;
-  if (stage.id === "landsend") {
-    shape = '<ellipse class="shape" cx="' + cx + '" cy="' + cy + '" rx="115" ry="78" fill="' + c + '" fill-opacity="0.3" stroke="' + c + '" stroke-width="2.5"/>';
-  } else if (stage.id === "soma") {
-    // dance tent — hex tent shape
-    shape = '<polygon class="shape" points="' +
-      (cx - 48) + "," + (cy + 38) + " " + (cx - 55) + "," + (cy - 12) + " " + cx + "," + (cy - 48) + " " +
-      (cx + 55) + "," + (cy - 12) + " " + (cx + 48) + "," + (cy + 38) +
-      '" fill="' + c + '" fill-opacity="0.3" stroke="' + c + '" stroke-width="2.5"/>';
-  } else {
-    const rx = stage.id === "twinpeaks" ? 72 : 62;
-    const ry = stage.id === "twinpeaks" ? 56 : 48;
-    shape = '<ellipse class="shape" cx="' + cx + '" cy="' + cy + '" rx="' + rx + '" ry="' + ry + '" fill="' + c + '" fill-opacity="0.3" stroke="' + c + '" stroke-width="2.5"/>';
-  }
+  const labelAbove = stage.id !== "panhandle";
+  const ly = labelAbove ? cy - 24 : cy + 34;
   return (
     '<g class="stage-shape" data-stage="' + stage.id + '" style="color:' + c + '">' +
-      shape +
-      '<text x="' + cx + '" y="' + (cy - 2) + '" text-anchor="middle" font-size="20" font-weight="800" fill="#e7e7ea">' + stage.name + "</text>" +
-      '<text x="' + cx + '" y="' + (cy + 18) + '" text-anchor="middle" font-size="13" fill="#9aa0ab">' + stage.loc + "</text>" +
+      '<circle cx="' + cx + '" cy="' + cy + '" r="46" fill="#ffffff" fill-opacity="0.001"/>' +
+      '<circle class="shape" cx="' + cx + '" cy="' + cy + '" r="12" fill="' + c + '" stroke="#0f1115" stroke-width="2.5"/>' +
+      '<text x="' + cx + '" y="' + ly + '" text-anchor="middle" font-size="21" font-weight="800" fill="#e7e7ea">' + stage.name + "</text>" +
     "</g>"
   );
 }
 
+function partyDotsSVG() {
+  const spots = [
+    { n: "Dolores'",        x: 358, y: 312 },
+    { n: "Cocktail Magic",  x: 462, y: 152 },
+    { n: "Duboce Triangle", x: 568, y: 222 },
+  ];
+  return spots.map(p =>
+    '<circle cx="' + p.x + '" cy="' + p.y + '" r="4.5" fill="#e7e7ea" stroke="#0f1115" stroke-width="1.5"/>' +
+    '<text x="' + p.x + '" y="' + (p.y + 17) + '" text-anchor="middle" font-size="10.5" fill="#cbd0d8">' + p.n + "</text>"
+  ).join("");
+}
+
 function vipSVG() {
-  // gold viewing wedges at the front (east side) of Lands End and Twin Peaks
   const g = "#eab308";
   let s = "";
-  const wedge = (id, dx) => {
-    const [cx, cy] = MAP_POS[id];
-    const x = cx + dx;
-    return '<path d="M ' + x + " " + (cy - 34) + " A 40 40 0 0 1 " + x + " " + (cy + 34) +
-      ' L ' + (x - 14) + " " + (cy + 22) + " A 26 26 0 0 0 " + (x - 14) + " " + (cy - 22) + ' Z" ' +
-      'fill="url(#vipHatch)" stroke="' + g + '" stroke-width="1.5"/>';
+  // VIP viewing areas (hatched gold), matching the official patron map
+  const viewing = (x, y, rx, ry) =>
+    '<ellipse cx="' + x + '" cy="' + y + '" rx="' + rx + '" ry="' + ry + '" fill="url(#vipHatch)" stroke="' + g + '" stroke-width="1.5"/>' +
+    '<text x="' + x + '" y="' + (y + 4) + '" text-anchor="middle" font-size="10" font-weight="800" fill="' + g + '">VIP</text>';
+  s += viewing(332, 186, 30, 15);  // Sutro viewing
+  s += viewing(828, 208, 30, 15);  // Twin Peaks viewing
+  // VIP Courtyard on the north edge of Polo Field
+  s += '<rect x="230" y="252" width="118" height="24" rx="12" fill="url(#vipHatch)" stroke="' + g + '" stroke-width="1.5"/>' +
+       '<text x="289" y="268" text-anchor="middle" font-size="10" font-weight="800" fill="' + g + '">VIP COURTYARD</text>';
+  // Gates
+  const gate = (x, y, label, gold) => {
+    const col = gold ? g : "#e7e7ea";
+    return '<g><text x="' + x + '" y="' + y + '" text-anchor="middle" font-size="13" fill="' + col + '">' + (gold ? "★" : "▼") + "</text>" +
+      '<text x="' + x + '" y="' + (y + 15) + '" text-anchor="middle" font-size="10.5" font-weight="700" fill="' + col + '">' + label + "</text></g>";
   };
-  s += wedge("landsend", 78);
-  s += wedge("twinpeaks", 40);
-  // VIP entrances (star markers) + lounges
-  const entr = (x, y, label, anchor) =>
-    '<g><text x="' + x + '" y="' + (y + 5) + '" text-anchor="middle" font-size="17" fill="' + g + '">★</text>' +
-    '<text x="' + (anchor === "start" ? x + 12 : x) + '" y="' + (y + 24) + '" text-anchor="' + (anchor || "middle") + '" font-size="11" font-weight="700" fill="' + g + '">' + label + "</text></g>";
-  s += entr(150, 390, "VIP ENTRANCE");
-  s += entr(640, 390, "VIP ENTRANCE");
-  const lounge = (x, y) =>
-    '<g><rect x="' + (x - 44) + '" y="' + (y - 13) + '" width="88" height="26" rx="13" fill="' + g + '" fill-opacity="0.15" stroke="' + g + '" stroke-width="1.2"/>' +
-    '<text x="' + x + '" y="' + (y + 4) + '" text-anchor="middle" font-size="11" font-weight="700" fill="' + g + '">VIP LOUNGE</text></g>';
-  s += lounge(185, 130);
-  s += lounge(565, 350);
+  s += gate(455, 68, "NORTH GATE", false);
+  s += gate(400, 415, "SOUTH GATE", false);
+  s += gate(95, 148, "NORTH VIP GATE", true);
+  s += gate(185, 415, "SOUTH VIP GATE", true);
+  s += gate(70, 235, "VIP BOX OFFICE", true);
+  s += '<text x="948" y="120" text-anchor="middle" font-size="10.5" font-weight="700" fill="#e7e7ea">EAST</text>' +
+       '<text x="948" y="133" text-anchor="middle" font-size="10.5" font-weight="700" fill="#e7e7ea">EXIT →</text>';
   return s;
 }
 
@@ -299,22 +326,25 @@ function renderMap() {
     "</defs>" +
     // park
     '<rect x="15" y="45" width="970" height="390" rx="26" fill="#16211a" stroke="#2c313b" stroke-width="1.5"/>' +
-    '<text x="30" y="32" font-size="14" fill="#9aa0ab">Golden Gate Park — schematic, not to scale · West ← → East</text>' +
+    '<text x="30" y="32" font-size="14" fill="#9aa0ab">Golden Gate Park — schematic, matches official map · West ← → East</text>' +
     // drives
     '<path d="M 25 90 C 250 70, 700 100, 975 80" fill="none" stroke="#3a4150" stroke-width="5" stroke-linecap="round"/>' +
-    '<text x="500" y="72" text-anchor="middle" font-size="11" fill="#727a88">JFK Drive</text>' +
+    '<text x="560" y="72" text-anchor="middle" font-size="11" fill="#727a88">JFK Drive</text>' +
     '<path d="M 25 415 C 300 400, 720 425, 975 405" fill="none" stroke="#3a4150" stroke-width="5" stroke-linecap="round"/>' +
-    '<text x="380" y="443" text-anchor="middle" font-size="11" fill="#727a88">MLK Jr Drive</text>' +
-    '<path d="M 483 88 L 470 412" fill="none" stroke="#3a4150" stroke-width="4" stroke-linecap="round"/>' +
-    '<text x="497" y="405" font-size="11" fill="#727a88">Transverse Dr</text>' +
+    '<text x="640" y="443" text-anchor="middle" font-size="11" fill="#727a88">MLK Jr Drive</text>' +
+    '<path d="M 942 88 L 932 412" fill="none" stroke="#3a4150" stroke-width="4" stroke-linecap="round"/>' +
+    '<text x="912" y="400" font-size="11" fill="#727a88" transform="rotate(-88 912 400)">Transverse Dr</text>' +
     // tree texture
     '<g fill="#1f2f24">' +
-      '<circle cx="310" cy="120" r="14"/><circle cx="330" cy="132" r="10"/>' +
-      '<circle cx="760" cy="330" r="14"/><circle cx="782" cy="318" r="10"/>' +
-      '<circle cx="930" cy="120" r="12"/><circle cx="70" cy="350" r="12"/>' +
+      '<circle cx="150" cy="105" r="14"/><circle cx="172" cy="117" r="10"/>' +
+      '<circle cx="620" cy="350" r="14"/><circle cx="643" cy="338" r="10"/>' +
+      '<circle cx="900" cy="330" r="12"/><circle cx="60" cy="330" r="12"/>' +
+      '<circle cx="530" cy="105" r="11"/>' +
     "</g>" +
+    meadowsSVG() +
     vipSVG() +
-    STAGES.map(stageShapeSVG).join("") +
+    partyDotsSVG() +
+    STAGES.map(stageMarkerSVG).join("") +
     '<line id="walk-line" x1="0" y1="0" x2="0" y2="0" stroke="#e7e7ea" stroke-width="3" stroke-dasharray="8 7" stroke-linecap="round" opacity="0"/>' +
     "</svg>";
 
@@ -340,13 +370,35 @@ function renderMap() {
   for (const p of VIP.perks) vip += "<li>" + p + "</li>";
   vip += "</ul></div>";
 
+  const toggle =
+    '<div class="map-toggle">' +
+      '<button data-mapview="schematic"' + (mapView === "schematic" ? ' class="on"' : "") + ">Schematic</button>" +
+      '<button data-mapview="official"' + (mapView === "official" ? ' class="on"' : "") + ">Official map</button>" +
+    "</div>";
+
+  const official =
+    '<div id="map-official"' + (mapView === "official" ? "" : " hidden") + ">" +
+      '<div class="zoom-row">' +
+        '<button class="zoom-btn" data-zoom="-1">−</button>' +
+        '<span class="zoom-lvl" id="zoom-lvl">' + OFFICIAL_ZOOMS[officialZoom] + "%</span>" +
+        '<button class="zoom-btn" data-zoom="1">+</button>' +
+        '<span class="hint" style="margin-left:auto;font-size:12px;color:var(--muted)">drag to pan</span>' +
+      "</div>" +
+      '<div class="official-wrap"><img id="official-img" src="./assets/official-map.webp" alt="Official Outside Lands patron map" style="width:' + OFFICIAL_ZOOMS[officialZoom] + '%"></div>' +
+      '<div class="disclaimer">Official 2026 patron map — cached, works offline in the park.</div>' +
+    "</div>";
+
   el.innerHTML =
-    '<div class="map-wrap">' + svg + "</div>" +
-    legend +
-    '<div class="walk-result" id="walk-result"><span class="hint">Tap two stages on the map to see the walk time.</span></div>' +
+    toggle +
+    '<div id="map-schematic"' + (mapView === "schematic" ? "" : " hidden") + ">" +
+      '<div class="map-wrap">' + svg + "</div>" +
+      legend +
+    "</div>" +
+    official +
+    '<div class="walk-result" id="walk-result"><span class="hint">Tap two stages on the schematic to see the walk time.</span></div>' +
     matrix +
     vip +
-    '<div class="disclaimer">All walk times are rough estimates — crowds slow everything down, especially around headliner changeovers.</div>';
+    '<div class="disclaimer">All walk times are estimates scaled from the official map — crowds slow everything down, especially around headliner changeovers.</div>';
 }
 
 function updateMapSelection() {
@@ -474,6 +526,31 @@ document.addEventListener("click", e => {
     else if (mapSel.length >= 2) mapSel = [id];
     else mapSel.push(id);
     updateMapSelection();
+    return;
+  }
+  const mv = e.target.closest("[data-mapview]");
+  if (mv) {
+    mapView = mv.dataset.mapview;
+    document.getElementById("map-schematic").hidden = mapView !== "schematic";
+    document.getElementById("map-official").hidden = mapView !== "official";
+    document.querySelectorAll("[data-mapview]").forEach(b => b.classList.toggle("on", b.dataset.mapview === mapView));
+    return;
+  }
+  const zb = e.target.closest("[data-zoom]");
+  if (zb) {
+    officialZoom = Math.min(OFFICIAL_ZOOMS.length - 1, Math.max(0, officialZoom + +zb.dataset.zoom));
+    document.getElementById("official-img").style.width = OFFICIAL_ZOOMS[officialZoom] + "%";
+    document.getElementById("zoom-lvl").textContent = OFFICIAL_ZOOMS[officialZoom] + "%";
+    return;
+  }
+  // tap a set row (outside its buttons) to expand the longer artist bio
+  const row = e.target.closest(".row[data-set]");
+  if (row) {
+    const bio = row.querySelector(".bio");
+    if (bio) {
+      bio.hidden = !bio.hidden;
+      row.classList.toggle("expanded", !bio.hidden);
+    }
   }
 });
 
