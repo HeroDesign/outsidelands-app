@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>OSL Saturday</title>
+  <meta name="description" content="Outside Lands 2026 Saturday planner — lineup, map, walk times, VIP.">
+  <meta name="theme-color" content="#0f1115">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="OSL Sat">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <link rel="icon" href="./icons/icon-192.png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>OSL Saturday</h1>
+    <span class="date">Sat, Aug 8</span>
+    <span class="vip-tag">VIP</span>
+  </header>
+
+  <main>
+    <section id="panel-time" class="panel"></section>
+    <section id="panel-stages" class="panel"></section>
+    <section id="panel-mine" class="panel"></section>
+    <section id="panel-map" class="panel"></section>
+  </main>
+
+  <nav class="tabbar">
+    <a href="#time" data-tab="time"><span class="ico">🕒</span>By Time</a>
+    <a href="#stages" data-tab="stages"><span class="ico">🎪</span>Stages</a>
+    <a href="#mine" data-tab="mine"><span class="ico">⭐</span>My Day</a>
+    <a href="#map" data-tab="map"><span class="ico">🗺️</span>Map</a>
+  </nav>
+
+  <script src="./data.js"></script>
+  <script src="./app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js");
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (reloaded) return;
+        reloaded = true;
+        location.reload();
+      });
+    }
+  </script>
+</body>
+</html>
