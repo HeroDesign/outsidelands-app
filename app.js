@@ -84,6 +84,10 @@ function byStart(a, b) {
 
 function setById(id) { return SETS.find(s => s.id === id); }
 
+function spotifyUrl(set) {
+  return set.spotify || "https://open.spotify.com/search/" + encodeURIComponent(set.artist);
+}
+
 // ---------- shared row ----------
 
 function setRow(set, extra) {
@@ -100,7 +104,8 @@ function setRow(set, extra) {
           (extra && extra.owner ? extra.owner : "") +
           (set.bio ? '<span class="chev">▸</span>' : "") + '</div>' +
         '<div class="desc">' + set.desc + '</div>' +
-        (set.bio ? '<div class="bio" hidden>' + set.bio + '</div>' : "") +
+        (set.bio ? '<div class="bio" hidden>' + set.bio +
+          '<a class="sp-link" href="' + spotifyUrl(set) + '" target="_blank" rel="noopener">&#9654;&#xFE0E; Listen on Spotify</a></div>' : "") +
         '<span class="stage-chip">' + stage.name + '</span>' +
         (extra && extra.notes ? extra.notes : "") +
       '</div>' +
@@ -543,9 +548,9 @@ document.addEventListener("click", e => {
     document.getElementById("zoom-lvl").textContent = OFFICIAL_ZOOMS[officialZoom] + "%";
     return;
   }
-  // tap a set row (outside its buttons) to expand the longer artist bio
+  // tap a set row (outside its buttons/links) to expand the longer artist bio
   const row = e.target.closest(".row[data-set]");
-  if (row) {
+  if (row && !e.target.closest("a")) {
     const bio = row.querySelector(".bio");
     if (bio) {
       bio.hidden = !bio.hidden;

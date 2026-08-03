@@ -119,6 +119,42 @@ const BIOS = {
 };
 SETS.forEach(s => { if (BIOS[s.id]) s.bio = BIOS[s.id]; });
 
+// Verified Spotify artist pages (Bad Juuju has none — the app falls back to a search link)
+const SPOTIFY = {
+  "landsend-730":  "https://open.spotify.com/artist/0wn2qDKzeFlhjRUtJAwJjp",
+  "landsend-805":  "https://open.spotify.com/artist/66T34XqGkEWbzKWALSBDuR",
+  "landsend-880":  "https://open.spotify.com/artist/4N0TAwz9vhnQtjCqS65aKS",
+  "landsend-960":  "https://open.spotify.com/artist/07D1Bjaof0NFlU32KXiqUP",
+  "landsend-1040": "https://open.spotify.com/artist/0avMDS4HyoCEP6RqZJWpY2",
+  "landsend-1130": "https://open.spotify.com/artist/5p9HO3XC5P3BLxJs5Mtrhm",
+  "landsend-1235": "https://open.spotify.com/artist/0epOFNiUfyON9EYx7Tpr6V",
+  "twinpeaks-750":  "https://open.spotify.com/artist/2qltFRTCjw1j67Da9FR8F1",
+  "twinpeaks-835":  "https://open.spotify.com/artist/7KfMR05zRrWyhQimnYa8li",
+  "twinpeaks-910":  "https://open.spotify.com/artist/6jxGLrn1I14RIeRYodOpLN",
+  "twinpeaks-1005": "https://open.spotify.com/artist/7eKkW1zo5uzW8kUntiiBvz",
+  "twinpeaks-1110": "https://open.spotify.com/artist/0knGpCTbmG4ctl1wzYRZs4",
+  "twinpeaks-1210": "https://open.spotify.com/artist/3iOvXCl6edW5Um0fXEBRXy",
+  "sutro-755":  "https://open.spotify.com/artist/4xU7M9wEvpnvkNOyPdVi5y",
+  "sutro-830":  "https://open.spotify.com/artist/41pd7r1XBRsvdxY3vHEgib",
+  "sutro-905":  "https://open.spotify.com/artist/02gSuSAWEdWa5UOvqzjX6v",
+  "sutro-980":  "https://open.spotify.com/artist/2h3ooJn8m8X8cL2g1BZ1Rd",
+  "sutro-1055": "https://open.spotify.com/artist/6TsAG8Ve1icEC8ydeHm3C8",
+  "sutro-1130": "https://open.spotify.com/artist/3zW0xazqnHoq9QV9zBROVC",
+  "sutro-1245": "https://open.spotify.com/artist/78rUTD7y6Cy67W1RVzYs7t",
+  "panhandle-720":  "https://open.spotify.com/artist/1ZUNE7b5nNiN31AnJ0Smqj",
+  "panhandle-790":  "https://open.spotify.com/artist/5zaSiNpGxS2lOvZTIZiOQX",
+  "panhandle-875":  "https://open.spotify.com/artist/6UzwpF9cqjxgxXb2N6mb7y",
+  "panhandle-960":  "https://open.spotify.com/artist/3uX1tstdmFJyxW9b5mSNlU",
+  "panhandle-1065": "https://open.spotify.com/artist/72VywtXEoONiBLNu3ibGI7",
+  "panhandle-1160": "https://open.spotify.com/artist/33hAj1SghVYxDAxZxNDcyc",
+  "soma-835":  "https://open.spotify.com/artist/67yGrC4QoCSD0g7YMcGIgJ",
+  "soma-925":  "https://open.spotify.com/artist/6ZmJg6NCjGmRgC2GEI86pQ",
+  "soma-1015": "https://open.spotify.com/artist/14Tg9FvbNismPR1PJHxRau",
+  "soma-1120": "https://open.spotify.com/artist/5tDjiBYUsTqzd0RkTZxK7u",
+  "soma-1225": "https://open.spotify.com/artist/27gtK7m9vYwCyJ04zz0kIb",
+};
+SETS.forEach(s => { if (SPOTIFY[s.id]) s.spotify = SPOTIFY[s.id]; });
+
 const VIP = {
   viewing: ["landsend", "sutro", "twinpeaks"],
   perks: [
