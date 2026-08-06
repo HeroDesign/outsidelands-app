@@ -387,6 +387,7 @@ nav.tabbar a.active { color: var(--accent); }
 .official-wrap {
   overflow: auto;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y; /* browser pans with one finger; two-finger pinch is ours */
   max-height: 62vh;
   border-radius: 12px;
   border: 1px solid var(--line);

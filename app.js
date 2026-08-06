@@ -27,8 +27,9 @@ const MEADOWS = [
   { name: "Grass Lands",    cx: 485, cy: 398, rx: 48,  ry: 20, color: "#7cb342", lx: 485, ly: 434 },
 ];
 
-const MAP_ZOOMS = [100, 200, 300, 450];
-const zoomIdx = { official: 1, transport: 1 }; // index into MAP_ZOOMS per zoomable view
+// Continuous zoom (percent of container width) per zoomable map view.
+const ZOOM_MIN = 100, ZOOM_MAX = 600;
+const zoomPct = { official: 200, transport: 200 };
 
 let picks = loadPicks();
 let myDayView = "alan";
@@ -413,13 +414,84 @@ function zoomBlock(view, src, alt) {
   return (
     '<div class="zoom-row">' +
       '<button class="zoom-btn" data-zoom="-1" data-zoomview="' + view + '">−</button>' +
-      '<span class="zoom-lvl" id="zoom-lvl-' + view + '">' + MAP_ZOOMS[zoomIdx[view]] + "%</span>" +
+      '<span class="zoom-lvl" id="zoom-lvl-' + view + '">' + Math.round(zoomPct[view]) + "%</span>" +
       '<button class="zoom-btn" data-zoom="1" data-zoomview="' + view + '">+</button>' +
-      '<span class="hint" style="margin-left:auto;font-size:12px;color:var(--muted)">drag to pan</span>' +
+      '<span class="hint" style="margin-left:auto;font-size:12px;color:var(--muted)">pinch to zoom · drag to pan</span>' +
     "</div>" +
-    '<div class="official-wrap"><img id="img-' + view + '" src="' + src + '" alt="' + alt + '" style="width:' + MAP_ZOOMS[zoomIdx[view]] + '%"></div>'
+    '<div class="official-wrap" data-pinch="' + view + '"><img id="img-' + view + '" src="' + src + '" alt="' + alt + '" style="width:' + zoomPct[view] + '%"></div>'
   );
 }
+
+// ---------- pinch zoom ----------
+
+function setMapZoom(view, pct, focusX, focusY) {
+  pct = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, pct));
+  const img = document.getElementById("img-" + view);
+  const wrap = img.closest(".official-wrap");
+  const ratio = pct / zoomPct[view];
+  // keep the focus point (wrap-relative px; defaults to center) stationary
+  const fx = focusX !== undefined ? focusX : wrap.clientWidth / 2;
+  const fy = focusY !== undefined ? focusY : wrap.clientHeight / 2;
+  const cx = wrap.scrollLeft + fx, cy = wrap.scrollTop + fy;
+  zoomPct[view] = pct;
+  img.style.width = pct + "%";
+  wrap.scrollLeft = cx * ratio - fx;
+  wrap.scrollTop = cy * ratio - fy;
+  document.getElementById("zoom-lvl-" + view).textContent = Math.round(pct) + "%";
+}
+
+let pinch = null;
+let lastTap = { t: 0, x: 0, y: 0 };
+
+function touchDist(t) {
+  return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+}
+
+document.addEventListener("touchstart", e => {
+  const wrap = e.target.closest("[data-pinch]");
+  if (!wrap) return;
+  if (e.touches.length === 2) {
+    pinch = {
+      view: wrap.dataset.pinch,
+      wrap: wrap,
+      rect: wrap.getBoundingClientRect(),
+      startDist: touchDist(e.touches),
+      startPct: zoomPct[wrap.dataset.pinch],
+    };
+  }
+}, { passive: false });
+
+document.addEventListener("touchmove", e => {
+  if (!pinch || e.touches.length !== 2) return;
+  e.preventDefault(); // stop page-level pinch/scroll while zooming the map
+  const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - pinch.rect.left;
+  const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - pinch.rect.top;
+  setMapZoom(pinch.view, pinch.startPct * (touchDist(e.touches) / pinch.startDist), midX, midY);
+}, { passive: false });
+
+document.addEventListener("touchend", e => {
+  if (pinch && e.touches.length < 2) { pinch = null; return; }
+  // double-tap to zoom in / back out
+  if (e.changedTouches.length === 1) {
+    const wrap = e.target.closest("[data-pinch]");
+    if (!wrap) return;
+    const t = e.changedTouches[0];
+    const now = Date.now();
+    if (now - lastTap.t < 300 && Math.hypot(t.clientX - lastTap.x, t.clientY - lastTap.y) < 30) {
+      const view = wrap.dataset.pinch;
+      const r = wrap.getBoundingClientRect();
+      setMapZoom(view, zoomPct[view] <= 110 ? 250 : 100, t.clientX - r.left, t.clientY - r.top);
+      lastTap = { t: 0, x: 0, y: 0 };
+    } else {
+      lastTap = { t: now, x: t.clientX, y: t.clientY };
+    }
+  }
+});
+
+// belt-and-suspenders: suppress iOS Safari page zoom while gesturing on a map
+document.addEventListener("gesturestart", e => {
+  if (e.target.closest && e.target.closest("[data-pinch]")) e.preventDefault();
+});
 
 function transportListHTML() {
   let s = "";
@@ -578,9 +650,7 @@ document.addEventListener("click", e => {
   const zb = e.target.closest("[data-zoom]");
   if (zb) {
     const v = zb.dataset.zoomview;
-    zoomIdx[v] = Math.min(MAP_ZOOMS.length - 1, Math.max(0, zoomIdx[v] + +zb.dataset.zoom));
-    document.getElementById("img-" + v).style.width = MAP_ZOOMS[zoomIdx[v]] + "%";
-    document.getElementById("zoom-lvl-" + v).textContent = MAP_ZOOMS[zoomIdx[v]] + "%";
+    setMapZoom(v, zoomPct[v] * (zb.dataset.zoom === "1" ? 1.5 : 1 / 1.5));
     return;
   }
   // tap a set row (outside its buttons/links) to expand the longer artist bio
