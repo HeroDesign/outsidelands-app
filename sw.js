@@ -1,5 +1,5 @@
 // OSL Sat — cache-first offline layer. Bump VERSION on every deploy.
-const VERSION = "osl26-v7";
+const VERSION = "osl26-v8";
 const ASSETS = [
   "./",
   "./index.html",

@@ -18,7 +18,7 @@
 <body>
   <header class="app-header">
     <h1>OSL Saturday</h1>
-    <span class="date">Sat, Aug 8</span>
+    <span class="date">Sat, Aug 8 · <span id="app-ver"></span></span>
     <span class="vip-tag">VIP</span>
   </header>
 
@@ -39,6 +39,7 @@
   <script src="./data.js"></script>
   <script src="./app.js"></script>
   <script>
+    document.getElementById("app-ver").textContent = APP_VERSION;
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("./sw.js");
       let reloaded = false;
@@ -46,6 +47,13 @@
         if (reloaded) return;
         reloaded = true;
         location.reload();
+      });
+      // iOS keeps standalone apps suspended for days — also check for updates
+      // whenever the app returns to the foreground, not just on cold launch.
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) {
+          navigator.serviceWorker.getRegistration().then(r => { if (r) r.update(); });
+        }
       });
     }
   </script>

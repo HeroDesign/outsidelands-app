@@ -4,6 +4,7 @@
 // ============================================================
 
 const FEST_DATE = "2026-08-08"; // Saturday, Aug 8 2026
+const APP_VERSION = "v8"; // keep in sync with VERSION in sw.js — shown in the header
 
 const STAGES = [
   { id: "landsend",  name: "Lands End",  loc: "Polo Field (west end)",    color: "#f97316" },
