@@ -1,5 +1,5 @@
 // OSL Sat — cache-first offline layer. Bump VERSION on every deploy.
-const VERSION = "osl26-v9";
+const VERSION = "osl26-v10";
 const ASSETS = [
   "./",
   "./index.html",
@@ -15,7 +15,13 @@ const ASSETS = [
 ];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  // cache: "reload" bypasses the HTTP cache (GitHub Pages max-age=600) so a new
+  // version never precaches stale files.
+  e.waitUntil(
+    caches.open(VERSION)
+      .then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: "reload" }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", e => {
