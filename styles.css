@@ -458,6 +458,51 @@ details.matrix th, details.matrix td {
 details.matrix th { color: var(--muted); font-weight: 700; }
 details.matrix th.rowh { text-align: left; }
 
+/* Getting There */
+.group-head {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 14px 4px 6px;
+}
+.place-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 10px 10px 12px;
+  margin-bottom: 8px;
+}
+.place-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #0f1115;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.place-mid { flex: 1; min-width: 0; }
+.place-name { font-size: 14px; font-weight: 600; }
+.place-detail { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.map-link {
+  flex-shrink: 0;
+  background: #38bdf8;
+  color: #04222f;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  border-radius: 999px;
+  padding: 6px 11px;
+}
+
 .vip-card {
   background: color-mix(in srgb, var(--gold) 7%, var(--card));
   border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);

@@ -1,5 +1,5 @@
 // OSL Sat — cache-first offline layer. Bump VERSION on every deploy.
-const VERSION = "osl26-v5";
+const VERSION = "osl26-v6";
 const ASSETS = [
   "./",
   "./index.html",
@@ -11,6 +11,7 @@ const ASSETS = [
   "./icons/icon-512.png",
   "./icons/apple-touch-icon.png",
   "./assets/official-map.webp",
+  "./assets/transport-map.webp",
 ];
 
 self.addEventListener("install", e => {

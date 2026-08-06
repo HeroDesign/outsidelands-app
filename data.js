@@ -155,6 +155,31 @@ const SPOTIFY = {
 };
 SETS.forEach(s => { if (SPOTIFY[s.id]) s.spotify = SPOTIFY[s.id]; });
 
+// Getting There — transport & lodging. Pin numbers/colors match assets/transport-map.webp
+// (regenerate with tools/make-transport-map.py if these change).
+const PLACE_GROUPS = [
+  { name: "Base",      color: "#eab308" },
+  { name: "Your gate", color: "#34d399" },
+  { name: "Arrival",   color: "#38bdf8" },
+  { name: "Departure", color: "#f97316" },
+  { name: "Route waypoints for the drive home", color: "#a78bfa" },
+  { name: "Useful",    color: "#9aa0ab" },
+];
+
+const PLACES = [
+  { n: 1,  group: "Base",      name: "The Lodge at the Presidio",            detail: "105 Montgomery St — home base",                                        lat: 37.80184, lng: -122.45824 },
+  { n: 2,  group: "Your gate", name: "VIP Entrance (North)",                 detail: "36th Ave & JFK Drive — your main way in",                              lat: 37.7714,  lng: -122.4959 },
+  { n: 3,  group: "Your gate", name: "VIP Entrance (South, shuttle riders)", detail: "MLK Jr Drive, west of South Gate — backup only",                       lat: 37.7657,  lng: -122.4945 },
+  { n: 4,  group: "Arrival",   name: "Official rideshare drop-off",          detail: "Balboa St between 30th & 31st Ave (alongside Washington High School)", lat: 37.7766,  lng: -122.4900 },
+  { n: 5,  group: "Arrival",   name: "Secondary rideshare zone",             detail: "30th Ave between Balboa & Anza",                                       lat: 37.7775,  lng: -122.4899 },
+  { n: 6,  group: "Departure", name: "Geary Blvd & 36th Ave",                detail: "Primary Uber/Lyft pickup — ~15 min walk north from the gate",          lat: 37.7804,  lng: -122.4957 },
+  { n: 7,  group: "Departure", name: "Taxi stand",                           detail: "Fulton St between 28th & 29th — metered, no surge, open until 2am Monday", lat: 37.7729, lng: -122.4879 },
+  { n: 8,  group: "Departure", name: "Taxi stand (alt)",                     detail: "Fulton St between 24th & 25th Ave",                                    lat: 37.7729,  lng: -122.4837 },
+  { n: 9,  group: "Route waypoints for the drive home", name: "Arguello Gate", detail: "Arguello Blvd & Lake St — the Presidio entrance you'll come through", lat: 37.7877, lng: -122.4588 },
+  { n: 10, group: "Route waypoints for the drive home", name: "Lake St & Park Presidio Blvd", detail: "The turn — also a quieter pickup spot if Geary is chaotic", lat: 37.7859, lng: -122.4725 },
+  { n: 11, group: "Useful",    name: "Bay Wheels valet station",             detail: "JFK Drive just east of Transverse Dr — near the east gate, ~1 mile from yours", lat: 37.7717, lng: -122.4788 },
+];
+
 const VIP = {
   viewing: ["landsend", "sutro", "twinpeaks"],
   perks: [

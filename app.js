@@ -27,8 +27,8 @@ const MEADOWS = [
   { name: "Grass Lands",    cx: 485, cy: 398, rx: 48,  ry: 20, color: "#7cb342", lx: 485, ly: 434 },
 ];
 
-const OFFICIAL_ZOOMS = [100, 200, 300, 450];
-let officialZoom = 1; // index into OFFICIAL_ZOOMS
+const MAP_ZOOMS = [100, 200, 300, 450];
+const zoomIdx = { official: 1, transport: 1 }; // index into MAP_ZOOMS per zoomable view
 
 let picks = loadPicks();
 let myDayView = "alan";
@@ -378,19 +378,21 @@ function renderMap() {
   const toggle =
     '<div class="map-toggle">' +
       '<button data-mapview="schematic"' + (mapView === "schematic" ? ' class="on"' : "") + ">Schematic</button>" +
-      '<button data-mapview="official"' + (mapView === "official" ? ' class="on"' : "") + ">Official map</button>" +
+      '<button data-mapview="official"' + (mapView === "official" ? ' class="on"' : "") + ">Official</button>" +
+      '<button data-mapview="transport"' + (mapView === "transport" ? ' class="on"' : "") + ">Getting There</button>" +
     "</div>";
 
   const official =
     '<div id="map-official"' + (mapView === "official" ? "" : " hidden") + ">" +
-      '<div class="zoom-row">' +
-        '<button class="zoom-btn" data-zoom="-1">−</button>' +
-        '<span class="zoom-lvl" id="zoom-lvl">' + OFFICIAL_ZOOMS[officialZoom] + "%</span>" +
-        '<button class="zoom-btn" data-zoom="1">+</button>' +
-        '<span class="hint" style="margin-left:auto;font-size:12px;color:var(--muted)">drag to pan</span>' +
-      "</div>" +
-      '<div class="official-wrap"><img id="official-img" src="./assets/official-map.webp" alt="Official Outside Lands patron map" style="width:' + OFFICIAL_ZOOMS[officialZoom] + '%"></div>' +
+      zoomBlock("official", "./assets/official-map.webp", "Official Outside Lands patron map") +
       '<div class="disclaimer">Official 2026 patron map — cached, works offline in the park.</div>' +
+    "</div>";
+
+  const transport =
+    '<div id="map-transport"' + (mapView === "transport" ? "" : " hidden") + ">" +
+      zoomBlock("transport", "./assets/transport-map.webp", "Transport and lodging map with numbered pins") +
+      '<div class="disclaimer">Pin numbers match the list below. Map © OpenStreetMap contributors — cached, works offline; the Maps links need signal.</div>' +
+      transportListHTML() +
     "</div>";
 
   el.innerHTML =
@@ -398,12 +400,43 @@ function renderMap() {
     '<div id="map-schematic"' + (mapView === "schematic" ? "" : " hidden") + ">" +
       '<div class="map-wrap">' + svg + "</div>" +
       legend +
+      '<div class="walk-result" id="walk-result"><span class="hint">Tap two stages on the schematic to see the walk time.</span></div>' +
+      matrix +
+      '<div class="disclaimer">All walk times are estimates scaled from the official map — crowds slow everything down, especially around headliner changeovers.</div>' +
     "</div>" +
     official +
-    '<div class="walk-result" id="walk-result"><span class="hint">Tap two stages on the schematic to see the walk time.</span></div>' +
-    matrix +
-    vip +
-    '<div class="disclaimer">All walk times are estimates scaled from the official map — crowds slow everything down, especially around headliner changeovers.</div>';
+    transport +
+    vip;
+}
+
+function zoomBlock(view, src, alt) {
+  return (
+    '<div class="zoom-row">' +
+      '<button class="zoom-btn" data-zoom="-1" data-zoomview="' + view + '">−</button>' +
+      '<span class="zoom-lvl" id="zoom-lvl-' + view + '">' + MAP_ZOOMS[zoomIdx[view]] + "%</span>" +
+      '<button class="zoom-btn" data-zoom="1" data-zoomview="' + view + '">+</button>' +
+      '<span class="hint" style="margin-left:auto;font-size:12px;color:var(--muted)">drag to pan</span>' +
+    "</div>" +
+    '<div class="official-wrap"><img id="img-' + view + '" src="' + src + '" alt="' + alt + '" style="width:' + MAP_ZOOMS[zoomIdx[view]] + '%"></div>'
+  );
+}
+
+function transportListHTML() {
+  let s = "";
+  for (const g of PLACE_GROUPS) {
+    const items = PLACES.filter(p => p.group === g.name);
+    if (!items.length) continue;
+    s += '<div class="group-head">' + g.name + "</div>";
+    for (const p of items) {
+      s +=
+        '<div class="place-row">' +
+          '<span class="place-num" style="background:' + g.color + '">' + p.n + "</span>" +
+          '<div class="place-mid"><div class="place-name">' + p.name + '</div><div class="place-detail">' + p.detail + "</div></div>" +
+          '<a class="map-link" href="https://maps.apple.com/?ll=' + p.lat + "," + p.lng + "&amp;q=" + encodeURIComponent(p.name) + '" target="_blank" rel="noopener">Maps&nbsp;↗</a>' +
+        "</div>";
+    }
+  }
+  return s;
 }
 
 function updateMapSelection() {
@@ -536,16 +569,18 @@ document.addEventListener("click", e => {
   const mv = e.target.closest("[data-mapview]");
   if (mv) {
     mapView = mv.dataset.mapview;
-    document.getElementById("map-schematic").hidden = mapView !== "schematic";
-    document.getElementById("map-official").hidden = mapView !== "official";
+    ["schematic", "official", "transport"].forEach(v => {
+      document.getElementById("map-" + v).hidden = v !== mapView;
+    });
     document.querySelectorAll("[data-mapview]").forEach(b => b.classList.toggle("on", b.dataset.mapview === mapView));
     return;
   }
   const zb = e.target.closest("[data-zoom]");
   if (zb) {
-    officialZoom = Math.min(OFFICIAL_ZOOMS.length - 1, Math.max(0, officialZoom + +zb.dataset.zoom));
-    document.getElementById("official-img").style.width = OFFICIAL_ZOOMS[officialZoom] + "%";
-    document.getElementById("zoom-lvl").textContent = OFFICIAL_ZOOMS[officialZoom] + "%";
+    const v = zb.dataset.zoomview;
+    zoomIdx[v] = Math.min(MAP_ZOOMS.length - 1, Math.max(0, zoomIdx[v] + +zb.dataset.zoom));
+    document.getElementById("img-" + v).style.width = MAP_ZOOMS[zoomIdx[v]] + "%";
+    document.getElementById("zoom-lvl-" + v).textContent = MAP_ZOOMS[zoomIdx[v]] + "%";
     return;
   }
   // tap a set row (outside its buttons/links) to expand the longer artist bio
