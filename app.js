@@ -205,6 +205,7 @@ function renderMyDay() {
         '<button data-view="both"' + (myDayView === "both" ? ' class="on"' : "") + ">Both</button>" +
       "</div>" +
       '<button class="share-btn" id="share-picks">Share</button>' +
+      '<button class="share-btn" id="import-picks">Import</button>' +
     "</div>";
 
   if (myDayView !== "both") {
@@ -558,7 +559,7 @@ function updateNowState() {
 function sharePicks() {
   const payload = btoa(JSON.stringify(picks));
   const url = location.origin + location.pathname + "#import=" + payload;
-  const done = () => alert("Link copied — send it to the other phone and open it there.");
+  const done = () => alert("Link copied — text it to the other phone. There: open the app, My Day → Import, and paste it.");
   if (navigator.share) {
     navigator.share({ title: "OSL Saturday picks", url: url }).catch(() => {});
   } else if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -568,23 +569,36 @@ function sharePicks() {
   }
 }
 
+function applyImportPayload(payload) {
+  const incoming = JSON.parse(atob(payload));
+  if (!incoming || !Array.isArray(incoming.alan) || !Array.isArray(incoming.dani)) throw new Error("bad payload");
+  picks.alan = [...new Set([...picks.alan, ...incoming.alan])];
+  picks.dani = [...new Set([...picks.dani, ...incoming.dani])];
+  savePicks();
+  renderAll();
+}
+
+function importPicksPrompt() {
+  const raw = prompt("Paste the picks link you were sent:");
+  if (!raw) return;
+  const m = raw.trim().match(/#import=([A-Za-z0-9+/=]+)/);
+  try {
+    applyImportPayload(m ? m[1] : raw.trim());
+    alert("Picks imported ✓ — merged into this phone.");
+  } catch (e) {
+    alert("Couldn't read that — paste the whole link that Share copied.");
+  }
+}
+
 function checkImport() {
   const m = location.hash.match(/^#import=(.+)$/);
   if (!m) return;
   history.replaceState(null, "", location.pathname + location.search + "#mine");
-  let incoming;
+  if (!confirm("Import picks from this link? They'll be merged with what's already on this phone.")) return;
   try {
-    incoming = JSON.parse(atob(m[1]));
-    if (!incoming || !Array.isArray(incoming.alan) || !Array.isArray(incoming.dani)) throw 0;
+    applyImportPayload(m[1]);
   } catch (e) {
     alert("That share link couldn't be read.");
-    return;
-  }
-  if (confirm("Import picks from this link? They'll be merged with what's already on this phone.")) {
-    picks.alan = [...new Set([...picks.alan, ...incoming.alan])];
-    picks.dani = [...new Set([...picks.dani, ...incoming.dani])];
-    savePicks();
-    renderAll();
   }
 }
 
@@ -627,6 +641,10 @@ document.addEventListener("click", e => {
   }
   if (e.target.closest("#share-picks")) {
     sharePicks();
+    return;
+  }
+  if (e.target.closest("#import-picks")) {
+    importPicksPrompt();
     return;
   }
   const stageG = e.target.closest("g.stage-shape");
